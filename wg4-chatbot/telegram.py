@@ -9,6 +9,8 @@ import urllib
 import config
 import urllib.parse
 from lxml import objectify
+from bot_speech import BotCommunication
+from NS_connect import NS_info
 # python3: urllib.parse.quote_plus
 # python2: urllib.pathname2url
 TOKEN = config.TOKEN
@@ -73,22 +75,31 @@ def echo_all(updates):
             print(e)
 
 
+def send_messages(messages):
+    for text, chat_id in messages:
+        send_message(text, chat_id)
+
+
 def main():
-    last_textchat = (None, None)
+    ns_info = NS_info()
+    print(ns_info.list_of_stations)
+    communicator = BotCommunication(ns_info)
     last_update_id = None
     auth = (config.NS_UN, config.NS_WW)
-    print("testing NS")
-    print(objectify.parse(requests.get("http://webservices.ns.nl/ns-api-avt?station=utrecht", auth=auth).content))
-    print("done testing")
+    # print("testing NS")
+    # print(objectify.parse(requests.get("http://webservices.ns.nl/ns-api-avt?station=utrecht", auth=auth).content))
+    # print("done testing")
     while True:
         updates = get_updates(last_update_id)
         if len(updates["result"]) > 0:
-            if updates["result"][-1]["message"]["text"] == "The secret testing string.":
-                print(get_json_from_url(URL+"Sendmessage?text=bla+bla&reply_markup=keyboard?KeyboardButton?text=gib+location&request_location=true"))
-            else:
-                echo_all(updates)
+            print(updates["result"])
+            communicator.receive_message(updates)
+            responses = []
+            while communicator.response_waiting is True:
+                responses.append(communicator.respond())
+            send_messages(responses)
             last_update_id = get_last_update_id(updates)+1
-            print([update["update_id"] for update in updates["result"]])
+            # print([update["update_id"] for update in updates["result"]])
         time.sleep(0.5)
 
 
