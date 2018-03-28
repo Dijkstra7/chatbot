@@ -23,11 +23,11 @@ class Markov():
 	# Generate output
 	def generate_output(self, max_words=100):
 		self.seen.extend([NONWORD] * self.order) # clear it all
-		for i in xrange(max_words):
+		for i in range(max_words):
 			word = random.choice(self.table[tuple(self.seen)])
 			if word == NONWORD:
 				exit()
-			print word,
+			print(word)
 			self.seen.append(word)
 
 
