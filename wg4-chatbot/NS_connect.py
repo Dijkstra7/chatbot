@@ -15,8 +15,6 @@ class NS_info:
     def __init__(self):
         self.auth = (config.NS_UN, config.NS_WW)
         self.list_of_stations = self.get_list_of_stations(self.auth)
-        for station in self.list_of_stations:
-            print(station[0])
 
     def get_list_of_stations(self, auth = (None, None)):
         stations_dict = self.get_dict_of_stations(auth)
@@ -31,7 +29,6 @@ class NS_info:
                 if isinstance(synonyms, list) is True:
                     list_of_station_names.extend(synonyms)
                 else:
-                    print(type(synonyms))
                     list_of_station_names.append(synonyms)
             list_of_stations.append(list_of_station_names)
         return list_of_stations
