@@ -60,8 +60,8 @@ def get_last_chat_id_and_text(updates):
 
 
 def make_keyboard(buttons):
-	keyboard = [[button] for button in buttons]
-	keyboard_code = {'inline_keyboard': keyboard}
+	keyboard = [[{'text': button, 'callback_data': button}] for button in buttons]
+	keyboard_code = {'inline_keyboard': keyboard, 'remove_keyboard': True}
 	return json.dumps(keyboard_code)
 
 
@@ -70,7 +70,9 @@ def send_message(text, chat_id, buttons):
 		text)  # urllib.parse.quote_plus(text) # (python3)
 	url = URL + "sendMessage?text={}&chat_id={}".format(text, chat_id)
 	if buttons is not None:
+		url += "&remove_keyboard={}".format(json.dumps(True))
 		url += "&reply_markup={}".format(make_keyboard(buttons))
+	print("sending {}".format(url))
 	get_url(url)
 
 
