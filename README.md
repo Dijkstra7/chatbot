@@ -1,5 +1,5 @@
 # NS chatbot
-At this page you can find the code to work with the NS chatbot.
+At this page you can find the code to work with the [NS chatbot](http://t.me/Im_on_a_bot).
 This bot can help you with planning your trip. 
 
 Instead of just following a rule based system, the bot will try to actively 
