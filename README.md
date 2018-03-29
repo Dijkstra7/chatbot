@@ -42,7 +42,7 @@ the meaning of the user.
 Below you can find some examples of how the bot behaves.
 
 ##### Synonym guessing
-![example of synonym guessing](./wg4-chatbot/resources/example_synonyms.png)
+![example of synonym guessing](./wg4-chatbot/resources/example_synonyms.PNG)
 
 ##### Unknown behaviour
 ![example unknown behaviour](./wg4-chatbot/resources/unknown.PNG)
