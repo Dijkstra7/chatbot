@@ -10,8 +10,12 @@ meant Amsterdam Centraal.
 
 Below you can find some examples of the bot's behaviour.
 
-The output from a complete trip is like:
-
+The output from a complete trip contains:
+- The station, track and time of departure
+- Any possible switching of trains with info of what station this happens with
+time and track of arrival and departure at that station.
+- The station, track and time of arrival.
+ 
 
 ## Resources used
 ### NLTK toolkit
@@ -41,12 +45,30 @@ the meaning of the user.
 ## Examples
 Below you can find some examples of how the bot behaves.
 
+##### Planning a trip
+![Short example of planning](./wg4-chatbot/resources/Direct_advise.PNG)
+
 ##### Synonym guessing
 ![example of synonym guessing](./wg4-chatbot/resources/example_synonyms.PNG)
 
 ##### Unknown behaviour
 ![example unknown behaviour](./wg4-chatbot/resources/unknown.PNG)
 
+## How to run 
+In order to run this you will need to add config.py to the wg4-chatbot map.
+config.py should contain the following code:
+
+```
+TOKEN = "<Insert bot token here>"
+NS_WW = "<Insert NS password here">
+NS_UN = "<Insert NS username here>"
+```
+
+A token can be created by contacting the [Botfather](http:t.me/botfather) at 
+Telegram and asking for a new bot with `/newbot`
+
+Access to the NS API can be found
+ [here](https://www.ns.nl/ews-aanvraagformulier/?0)
 
 ## To do:
 - Add a warning function
