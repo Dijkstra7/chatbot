@@ -247,8 +247,16 @@ class TravelPlanner(Responder):
 		return self.return_message({"response": reply})
 
 	def advise_string(self, lst):
-		advise_str = "I have found an advise for you: \n Be in {} at track {} " \
-		             "at {}".format(lst[0], lst[1], lst[2])
+		advise_str = "I have found an advise for you: \n Be in {} \nAt track {} " \
+		             "\nAt {}\n".format(lst[0], lst[1], lst[2])
+		if len(lst[3]) > 0:
+			for via in lst[3]:
+				advise_str += "\nYou have to switch trains in {}.\nThere you will " \
+				              "arrive at track {} at time {}.\nYour next train " \
+				              "leaves from track {} at {}.\n".format(*via)
+		advise_str += "\nYou will arrive at {} at {}.\nThis will happen at " \
+		              "track{}.".format(lst[4], lst[6], lst[5])
+		return advise_str
 
 	def ask_for_value(self, idx_value):
 		return None
