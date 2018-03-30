@@ -62,8 +62,8 @@ class NS_info:
 	                    via_stat=None, prev=0, next=0, time=None, depart=True):
 		url = "http://webservices.ns.nl/ns-api-treinplanner?fromStation={}&" \
 		      "toStation={}&previousAdvices={}&nextAdvices={}&Departure={}".format(
-			urllib.parse.quote_plus(from_stat),
-			urllib.parse.quote_plus(to_stat),
+			urllib.parse.quote_plus(bytes(from_stat, 'utf8')),
+			urllib.parse.quote_plus(bytes(to_stat, 'utf8')),
 			json.dumps(prev),
 			json.dumps(next),
 			json.dumps(depart))
@@ -74,7 +74,7 @@ class NS_info:
 		print("sending url to ns api: {}".format(url))
 		return url
 
-	def give_advise(self, advice_args):
+	def give_advise(self, advise_args):
 		""" Advice args should be: (from_stat, to_stat, via_stat, prev, next
 				time, depart)
 				:returns [fromstat, gotime, gotrack, (0..n)*
@@ -82,7 +82,7 @@ class NS_info:
 									tostation, totime, totrack]
 
 			"""
-		url = self.make_advice_url(**advice_args)
+		url = self.make_advice_url(**advise_args)
 		advice_xml = requests.get(url, auth=self.auth).content.decode()
 		advice_dict = xmltodict.parse(advice_xml)
 		clean_advice_lst = self.clean_advice(advice_dict)

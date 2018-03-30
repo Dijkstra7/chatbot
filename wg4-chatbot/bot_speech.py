@@ -12,6 +12,7 @@ class BotCommunication:
 		self.chat_ids = []
 		self.send_this = []
 		self.history = history
+		self.input_history = []
 		if history is None:
 			self.history = []
 		self.response_waiting = False
@@ -21,12 +22,13 @@ class BotCommunication:
 		self.specials = SpecialResponses()
 		self.understander = UnderstandResponse(self.ns_api)
 		self.planner = TravelPlanner(self)
+		self.understand = Understand(self.ns_api, self)
 
 	def receive_message(self, messages):
 		for message in messages["result"]:
+			text = None
+			chat_id = None
 			try:
-				text = None
-				chat_id = None
 				if "message" in message:
 					text = message["message"]["text"]
 					chat_id = message["message"]["chat"]["id"]
@@ -37,28 +39,56 @@ class BotCommunication:
 				self.chat_ids.append(chat_id)
 			except Exception as e:
 				print(repr(e))
-			self.create_response()
+			self.input_history.append(text)
+			self.create_response("callback_query" in message)
 
-	def create_response(self, ):
+	def create_response(self, is_callback=False):
 		""" Creates a response to the message
 
 		"""
 		buttons = None
 		last_message = self.messages[-1]
 		last_id = self.chat_ids[-1]
-		if last_message in self.specials.special_cases:
-			reply = self.specials.generate_message(last_message)
-		else:
-			if self.planner.is_planning is True:
-				reply = self.planner.generate_message(last_message)
-			else:
-				reply = self.understander.generate_message(last_message)
-				if self.understander.new_planning is True:
-					reply = self.planner.generate_message(last_message, start=True)
-					self.understander.new_planning = False
-			if reply is None:
-				reply = self.did_not_get.generate_message()
+		self.understand.process_message(last_message)
+		if is_callback is True:
+			if len(self.history) == 0:
+				reply = {"response": "I am so clumsy sometimes, I completely forgot "
+				                     "what you have said. Please start again."}
+			elif last_message == "no":
+				reply = {"response": "I'm sorry, could you rephrase it then?"}
+			elif last_message == "yes":
+				if self.understand.ask_ss is True:
+					self.understand.ask_ss = False
+					self.understand.found_start_station = True
+					print("Found the begin:")
+					station = self.ns_api.official_station(self.history[-1][0])
+					self.planner.from_stat = station
+					response = "And where do you want to go?"
+				else:
+					self.understand.ask_es = False
+					self.understand.found_end_station = True
+					station = self.ns_api.official_station(self.input_history[-2])
+					print("Found the end:", self.input_history[-2])
+					self.planner.to_stat = station
+					response = "And from where do you want to start?"
+				if self.understand.give_advise():
+					reply = self.planner.generate_advise_message()
+				else:
+					reply = {"response": response}
 
+		else:
+			if self.understand.give_advise() is True:
+				reply = self.planner.generate_advise_message()
+			elif self.understand.special is True:
+				reply = self.specials.generate_message(last_message)
+			elif self.understand.greeting is True:
+				reply = {"response": "Hi there, Where do you want to go?"}
+			elif self.understand.ask_ss or self.understand.ask_es is True:
+				reply = self.understander.generate_message(last_message)
+			else:
+				reply = self.did_not_get.generate_message()
+		print(self.understand.flags(), self.understand.give_advise(),
+				self.planner.from_stat, self.planner.to_stat)
 		# unpack response
 		response = reply["response"]
 		if "buttons" in reply:
@@ -115,6 +145,13 @@ class SpecialResponses(Responder):
 		response = self.special_functions[self.special_cases.index(message)]()
 		return self.return_message({"response": response})
 
+	def has_special_case(self, message):
+		words = [word.strip(string.punctuation) for word in message.split()]
+		for word in words:
+			if word in self.special_cases:
+				return True
+		return False
+
 	def help(self):
 		return_string = "I am the NS chatbot. \n" \
 								    "I can help you to plan trips that use the train " \
@@ -161,6 +198,64 @@ class NotUnderstoodMessage(Responder):
 		           "response yet. \n If you wish to know what I can do, type " \
 		           "/help."
 		return self.return_message({"response": response})
+
+
+class Understand:
+	def __init__(self, ns_api, communicator):
+		self.understander = UnderstandResponse(ns_api)
+		self.communicator = communicator
+		# Flags
+		self.special = False
+		self.found_start_station = False
+		self.found_time = False
+		self.found_end_station = False
+		self.greeting = False
+		self.ask_ss = False
+		self.ask_es = False
+	def flags(self):
+		return [self.special, self.found_start_station, self.found_time,
+		        self.found_end_station, self.greeting, self.ask_ss, self.ask_es, ]
+
+	def process_message(self, message):
+		if self.communicator.specials.has_special_case(message):
+			self.special = True
+			return None
+		self.special = False
+		self.greeting = False
+		words = [word.strip(string.punctuation) for word in message.split()]
+		for word in words:
+			if self.communicator.understander.meaning(word) == "hello":
+				self.greeting = True
+				return None
+
+			if self.communicator.ns_api.is_station(word):
+				if self.found_end_station is False:
+					if self.communicator.ns_api.official_station(word) != word:
+						self.ask_es = True
+						return None
+					self.found_end_station = True
+					self.communicator.planner.to_stat = word
+					if self.found_start_station is False:
+						self.ask_ss = True
+					return None
+				else:
+					if self.found_start_station is False:
+						if self.communicator.ns_api.official_station(word) != word:
+							self.ask_ss = True
+							return None
+						self.found_start_station = True
+						self.communicator.planner.from_stat = word
+						if self.found_end_station is False:
+							self.ask_es = True
+
+	def give_advise(self):
+		stations_found = self.found_start_station and self.found_end_station
+		if self.communicator.planner.from_stat is None:
+			return False
+		if self.communicator.planner.to_stat is None:
+			return False
+		return stations_found
+
 
 
 class UnderstandResponse(Responder):
@@ -238,16 +333,16 @@ class TravelPlanner(Responder):
 			self.is_planning = True
 		if self.is_planning is True:
 			if False in self.values_checked:
-				#TESTING
-				advise = self.communicator.ns_api.give_advise({})
-				#/TESTING
 				reply = self.ask_for_value(self.values_checked.index(False))
-				if advise is not None:
-					reply = self.advise_string(advise)
+		return self.return_message({"response": reply})
+
+	def generate_advise_message(self):
+		advise = self.communicator.ns_api.give_advise(advise_args={'from_stat':self.from_stat, 'to_stat':self.to_stat})
+		reply = self.advise_string(advise)
 		return self.return_message({"response": reply})
 
 	def advise_string(self, lst):
-		advise_str = "I have found an advise for you: \n Be in {} \nAt track {} " \
+		advise_str = "I have found an advise for you: \nStart in {} \nAt track {} " \
 		             "\nAt {}\n".format(lst[0], lst[1], lst[2])
 		if len(lst[3]) > 0:
 			for via in lst[3]:
@@ -255,7 +350,7 @@ class TravelPlanner(Responder):
 				              "arrive at track {} at time {}.\nYour next train " \
 				              "leaves from track {} at {}.\n".format(*via)
 		advise_str += "\nYou will arrive at {} at {}.\nThis will happen at " \
-		              "track{}.".format(lst[4], lst[6], lst[5])
+		              "track {}.".format(lst[4], lst[6], lst[5])
 		return advise_str
 
 	def ask_for_value(self, idx_value):
